@@ -55,14 +55,28 @@ def get_api_answer(timestamp):
     приведя его из формата JSON к типам данных Python.
     """
     payload = {'from_date': timestamp}
+    response_params = {
+        'url': ENDPOINT,
+        'headers': HEADERS,
+        'params': payload
+    }
+
     try:
-        response = requests.get(url=ENDPOINT, headers=HEADERS, params=payload)
+        response = requests.get(
+            url=response_params.get('url'),
+            headers=response_params.get('headers'),
+            params=response_params.get('params')
+        )
     except Exception as error:
         raise Exception(f'Ошибка при запросе к основному API: {error}')
 
     if response.status_code != HTTPStatus.OK:
         status_code = response.status_code
-        raise Exception(f'Ошибка status_code: {status_code}')
+        raise Exception(f'Ошибка status_code: {status_code},'
+                        f'response_url - {response.url},'
+                        f'response_header - {response.headers}',
+                        f'response_content - {response.content}'
+                        )
     try:
         return response.json()
     except ValueError:
@@ -120,7 +134,7 @@ def main():
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            if len(homeworks) == 0:
+            if not homeworks:
                 message = 'Ваш список домашних работ пуст.'
                 logging.error(message)
                 send_message(bot, message)
@@ -129,9 +143,9 @@ def main():
                 send_message(bot, message)
             timestamp = response.get('current_date')
         except Exception as error:
-            logging.error(f'Сбой в работе программы:{error}')
-            message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            error_message = f'Сбой в работе программы: {error}'
+            logging.error(f'Сбой в работе программы:{error_message}')
+            send_message(bot, error_message)
         finally:
             time.sleep(RETRY_PERIOD)
 
